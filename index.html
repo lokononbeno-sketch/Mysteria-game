@@ -34,7 +34,8 @@
         <h1>La vérité<br><em>laisse toujours</em><br>des traces.</h1>
         <p class="intro">Une ville silencieuse. Un dossier oublié. À toi de découvrir ce que tout le monde veut cacher.</p>
         <button id="start-button" class="primary-button">COMMENCER L'ENQUÊTE <span>→</span></button>
-        <button id="continue-button" class="text-button" hidden>Reprendre ma partie</button>
+        <button id="continue-button" class="primary-button" hidden style="display:none">REPRENDRE L'ENQUÊTE <span>→</span></button>
+        <button id="new-game-button" class="text-button" hidden style="display:none">Nouvelle partie</button>
       </div>
       <div class="home-footer"><span>UNE AVENTURE INTERACTIVE</span><span>ÉPISODE 01 — PORTO-NOVO</span></div>
     </section>
@@ -42,28 +43,19 @@
     <section id="game-screen" class="screen game-screen" hidden>
       <div class="case-header">
         <button id="back-home" class="back-button" aria-label="Retour à l'accueil">←</button>
-        <div><p class="eyebrow">DOSSIER N° 001</p><h2>La chambre aux symboles</h2></div>
-        <span class="chapter-pill">01 / 05</span>
+        <div><p class="eyebrow" id="case-number">DOSSIER N° 001</p><h2 id="case-title">La chambre aux symboles</h2></div>
+        <span class="chapter-pill" id="chapter-pill">01 / 05</span>
       </div>
-      <div class="scene-meta"><span>📍 PORTO-NOVO</span><span id="scene-label">CENTRE MÉDICAL SAINT-MICHEL</span></div>
-      <div id="scene" class="scene scene-hospital" role="img" aria-label="Chambre d'un établissement médical à Porto-Novo">
-        <div class="scene-window"><span></span><i></i></div>
-        <div class="wall-clock">23:17</div>
-        <div class="wall-writing">△ ○ ║<br>IV · 7 · Ω<br>◉ ↗ ◇</div>
-        <div class="bed"><div class="pillow"></div><div class="sheet"></div></div>
-        <div class="bedside"><div class="drawer"></div><div class="lamp"></div></div>
-        <button class="hotspot hotspot-wall" data-target="wall" aria-label="Examiner les symboles sur le mur"><span>+</span></button>
-        <button class="hotspot hotspot-drawer" data-target="drawer" aria-label="Examiner la table de chevet"><span>+</span></button>
-        <button class="hotspot hotspot-bed" data-target="bed" aria-label="Examiner le lit"><span>+</span></button>
-        <button class="hotspot hotspot-box" data-target="lockbox" aria-label="Examiner le coffret métallique"><span>+</span></button>
-        <div class="scene-vignette"></div>
-      </div>
+      <div class="scene-meta"><span id="scene-city">📍 PORTO-NOVO</span><span id="scene-label">CENTRE MÉDICAL SAINT-MICHEL</span></div>
+      <!-- Le décor et les zones cliquables sont générés par game.js à partir de scenes/*.js -->
+      <div id="scene" class="scene" role="img" aria-label="Scène de l'enquête"></div>
       <div class="scene-hint" id="scene-hint">EXAMINE LES ÉLÉMENTS DE LA PIÈCE</div>
       <div class="inventory-panel">
         <div class="panel-heading"><span>INVENTAIRE</span><span id="inventory-count">0 OBJET</span></div>
         <div id="inventory-items" class="inventory-items"><span class="empty-inventory">Les objets trouvés apparaîtront ici.</span></div>
       </div>
       <div class="bottom-actions"><button id="journal-button" class="secondary-button">📓 Carnet d'enquête</button><button id="dialogue-button" class="secondary-button">💬 Interroger le témoin</button></div>
+      <button id="next-scene-button" class="primary-button" hidden style="display:none;margin-top:12px">ENQUÊTE SUIVANTE <span>→</span></button>
     </section>
 
     <div id="dialogue-modal" class="modal" hidden>
@@ -71,6 +63,8 @@
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </main>
+  <!-- Une balise <script> par scène, dans l'ordre. Le moteur (game.js) vient toujours en dernier. -->
+  <script src="scenes/01-porto-novo.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

@@ -16,5 +16,16 @@ HTML, CSS et JavaScript natifs. La progression du prototype est sauvegardée loc
 ## Lancer le jeu
 Ouvrir `index.html` dans un navigateur. Pour publier avec GitHub Pages : Settings → Pages → Deploy from a branch → main → /(root).
 
+## Structure du code
+- `game.js` : le moteur (sauvegarde, inventaire, carnet, fenêtres, navigation entre scènes, « Nouvelle partie »). Il ne contient aucun texte d'enquête.
+- `scenes/` : **un fichier par scène** (décor, zones cliquables, objets, dialogues, énigmes, carnet).
+- `index.html` et `style.css` : l'interface.
+
+### Ajouter une scène
+1. Copier `scenes/01-porto-novo.js` en `scenes/02-cotonou.js`.
+2. Changer `id`, `order`, `city`, `place`, `title`, les objets, les zones cliquables et la logique.
+3. Ajouter `<script src="scenes/02-cotonou.js"></script>` dans `index.html`, avant `game.js`.
+4. Quand le drapeau `completeFlag` de la scène est activé, le bouton « Enquête suivante » apparaît tout seul.
+
 ## Prototype actuel
-Le premier prototype présente l'écran d'accueil et une première scène d'enquête à Porto-Novo. Les illustrations de décor sont provisoires et dessinées en CSS ; elles seront remplacées progressivement par des illustrations originales et documentées de lieux béninois.
+Une première scène d'enquête à Porto-Novo (« La chambre aux symboles »). Les illustrations de décor sont provisoires et dessinées en CSS ; elles seront remplacées progressivement par des illustrations originales et documentées de lieux béninois.

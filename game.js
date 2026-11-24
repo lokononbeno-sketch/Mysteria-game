@@ -1,26 +1,93 @@
+/* ============================================================
+   MYSTERIA — moteur du jeu
+   Le moteur ne contient AUCUN texte d'enquête : tout le contenu
+   (décor, objets, dialogues, énigmes) vit dans scenes/*.js.
+   ============================================================ */
 const $ = (id) => document.getElementById(id);
-const SAVE_KEY = "mysteria-save-v2";
-const state = {
-  found: [], clueRead: false, drawerOpened: false, witnessAsked: false,
-  boxCodeSolved: false, boxOpened: false, sound: false, selectedItem: null
-};
-const itemInfo = {
-  key: { icon: "🗝️", name: "Petite clé en cuivre", description: "Une clé ancienne, légèrement oxydée." },
-  note: { icon: "📜", name: "Fragment de note", description: "Deux initiales écrites à l'encre : A.K." },
-  photo: { icon: "🖼️", name: "Photographie ancienne", description: "Au dos : 14.08.1998." },
-  dossier: { icon: "📁", name: "Dossier d'archives", description: "Un dossier portant le nom Kpassa." }
-};
-function save() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (error) { toast("Sauvegarde locale indisponible."); }
-  updateInventory();
+const SAVE_KEY = "mysteria-save-v3";
+const OLD_SAVE_KEY = "mysteria-save-v2";
+const TOTAL_CHAPTERS = 5;
+const DEFAULT_HINT = "EXAMINE LES ÉLÉMENTS DE LA PIÈCE";
+
+const scenes = (window.MYSTERIA_SCENES || []).slice().sort((a, b) => a.order - b.order);
+if (!scenes.length) throw new Error("Aucune scène chargée : vérifie les balises <script> dans index.html.");
+const itemInfo = Object.assign({}, ...scenes.map((s) => s.items || {}));
+
+const pad = (n) => String(n).padStart(2, "0");
+function show(el, visible) { el.hidden = !visible; el.style.display = visible ? "" : "none"; }
+
+/* ---------- État & sauvegarde ---------- */
+function freshState() {
+  return { sceneId: scenes[0].id, found: [], flags: {}, completed: [], sound: false, selectedItem: null };
+}
+const state = freshState();
+
+// Ancienne sauvegarde (v2) : on la convertit pour ne pas perdre la progression.
+function migrateV2(old) {
+  const flags = {};
+  ["clueRead", "drawerOpened", "witnessAsked", "boxCodeSolved", "boxOpened"].forEach((n) => { if (old[n]) flags[n] = true; });
+  return {
+    sceneId: scenes[0].id, found: old.found, flags,
+    completed: old.boxOpened ? [scenes[0].id] : [],
+    sound: !!old.sound, selectedItem: old.selectedItem || null
+  };
+}
+function readSave() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+    if (raw && Array.isArray(raw.found)) return raw;
+    const old = JSON.parse(localStorage.getItem(OLD_SAVE_KEY) || "null");
+    if (old && Array.isArray(old.found)) return migrateV2(old);
+  } catch (_) {}
+  return null;
+}
+function hasSave() {
+  try { return !!(localStorage.getItem(SAVE_KEY) || localStorage.getItem(OLD_SAVE_KEY)); } catch (_) { return false; }
 }
 function load() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
-    if (saved && Array.isArray(saved.found)) Object.assign(state, saved);
-  } catch (_) {}
-  updateInventory();
+  const saved = readSave();
+  if (saved) {
+    Object.assign(state, saved);
+    if (!scenes.some((s) => s.id === state.sceneId)) state.sceneId = scenes[0].id;
+  }
 }
+function save() {
+  if (isComplete() && !state.completed.includes(state.sceneId)) state.completed.push(state.sceneId);
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (error) { toast("Sauvegarde locale indisponible."); }
+  updateInventory();
+  updateHint();
+  updateNext();
+}
+
+/* ---------- Scène courante ---------- */
+function currentScene() { return scenes.find((s) => s.id === state.sceneId) || scenes[0]; }
+function isComplete() { const s = currentScene(); return !!(s.completeFlag && state.flags[s.completeFlag]); }
+
+function renderScene() {
+  const s = currentScene();
+  $("case-number").textContent = "DOSSIER N° " + s.caseNumber;
+  $("case-title").textContent = s.title;
+  $("chapter-pill").textContent = pad(s.order) + " / " + pad(TOTAL_CHAPTERS);
+  $("scene-city").textContent = "📍 " + s.city;
+  $("scene-label").textContent = s.place;
+  $("dialogue-button").textContent = s.dialogueLabel || "💬 Interroger";
+  show($("dialogue-button"), typeof s.interrogate === "function");
+
+  const sc = $("scene");
+  sc.className = "scene " + s.sceneClass;
+  sc.setAttribute("aria-label", s.ariaLabel || s.title);
+  sc.innerHTML = s.decorHTML
+    + s.hotspots.map((h) => '<button class="hotspot ' + h.className + '" data-target="' + h.target + '" aria-label="' + h.label + '"'
+      + (h.style ? ' style="' + h.style + '"' : "") + "><span>+</span></button>").join("")
+    + '<div class="scene-vignette"></div>';
+  sc.querySelectorAll(".hotspot").forEach((b) => b.addEventListener("click", () => examine(b.dataset.target)));
+
+  updateInventory();
+  updateHint();
+  updateNext();
+}
+
+/* ---------- Interface ---------- */
 function updateInventory() {
   const box = $("inventory-items");
   box.innerHTML = "";
@@ -40,17 +107,21 @@ function updateInventory() {
     el.addEventListener("click", () => {
       state.selectedItem = state.selectedItem === id ? null : id;
       updateInventory();
-      if (state.selectedItem) {
-        $("scene-hint").textContent = item.name.toUpperCase() + " — sélectionné";
-        toast(item.description);
-      } else {
-        $("scene-hint").textContent = "EXAMINE LES ÉLÉMENTS DE LA PIÈCE";
-      }
+      updateHint();
+      if (state.selectedItem) toast(item.description);
     });
     box.appendChild(el);
   });
   $("inventory-count").textContent = state.found.length + (state.found.length > 1 ? " OBJETS" : " OBJET");
 }
+function updateHint() {
+  const item = state.selectedItem && itemInfo[state.selectedItem];
+  $("scene-hint").textContent = item
+    ? item.name.toUpperCase() + " — sélectionné"
+    : (isComplete() ? "DOSSIER RÉSOLU — PASSE À L'ENQUÊTE SUIVANTE" : DEFAULT_HINT);
+}
+function updateNext() { show($("next-scene-button"), isComplete()); }
+
 function toast(message) {
   const el = $("toast");
   el.textContent = message;
@@ -74,152 +145,97 @@ function openModal(title, text, options = [], eyebrow = "OBSERVATION") {
   $("dialogue-modal").hidden = false;
 }
 function closeModal() { $("dialogue-modal").hidden = true; }
+
+/* ---------- API donnée aux scènes ---------- */
 function addItem(id) {
+  if (!itemInfo[id]) return;
   if (!state.found.includes(id)) {
     state.found.push(id);
     save();
     toast(itemInfo[id].name + " ajouté à l'inventaire.");
   }
 }
-function examine(target) {
-  if (target === "wall") {
-    state.clueRead = true;
-    save();
-    openModal("Les symboles sur le mur",
-      "Des signes ont été tracés à la hâte : un triangle, un cercle, quatre barres et les chiffres VII. Sous les symboles, une phrase presque effacée : « La date ouvre ce que la mémoire a fermé. »",
-      [
-        { label: "Noter les symboles dans le carnet", action: () => toast("Les symboles sont consignés dans le carnet.") },
-        { label: "Examiner la table de chevet", action: () => examine("drawer") }
-      ]);
-    return;
-  }
-  if (target === "drawer") {
-    if (!state.drawerOpened) {
-      state.drawerOpened = true;
-      addItem("key");
-      openModal("La table de chevet",
-        "Le tiroir était coincé. À l'intérieur, tu trouves une petite clé en cuivre et un papier plié portant deux lettres : « A.K. ».",
-        [
-          { label: "Récupérer le fragment de note", action: () => { addItem("note"); toast("Les initiales A.K. sont ajoutées au carnet."); } },
-          { label: "Regarder sous le lit", action: () => examine("bed") }
-        ]);
-    } else {
-      openModal("Le tiroir", "Il est vide à présent. Tu as récupéré son contenu.");
-    }
-    return;
-  }
-  if (target === "bed") {
-    if (!state.found.includes("photo")) {
-      addItem("photo");
-      openModal("Sous le lit",
-        "Une photographie ancienne était glissée sous le sommier. On y distingue la façade du bâtiment et, au dos, une date : 14.08.1998.",
-        [{ label: "Mémoriser la date", action: () => toast("Date enregistrée dans le carnet : 14.08.1998.") }]);
-    } else {
-      openModal("La photographie", "Tu as déjà récupéré la photographie. La date inscrite au dos est le 14 août 1998.");
-    }
-    return;
-  }
-  if (target === "lockbox") examineLockbox();
+function examine(target) { currentScene().examine(target, api); }
+function showJournal() {
+  const lines = currentScene().journal(api);
+  openModal("Carnet d'enquête", lines.join("\n"), [{ label: "Fermer le carnet", action: () => {} }], "NOTES DE L'INSPECTEUR");
 }
-function examineLockbox() {
-  if (state.boxOpened) {
-    openModal("Le coffret est vide", "Tu as déjà récupéré le dossier qu'il contenait.");
-    return;
-  }
-  if (!state.found.includes("photo")) {
-    openModal("Un coffret verrouillé", "Un petit coffret métallique est fixé sous le rebord du meuble. Un clavier à quatre chiffres protège son contenu. Il te faut trouver la date.");
-    return;
-  }
-  openModal("Le coffret métallique",
-    "La photographie porte la date 14.08.1998. Le coffret demande un code à quatre chiffres. Quelle partie de la date faut-il essayer ?",
-    [
-      { label: "1998", action: () => wrongCode() },
-      { label: "0814", action: () => wrongCode() },
-      { label: "1408", action: () => correctCode() }
-    ], "ÉNIGME · CODE À 4 CHIFFRES");
-}
-function wrongCode() {
-  toast("Le coffret émet un clic sourd. Ce n'est pas le bon code.");
-  openModal("Code incorrect", "La date complète est 14.08.1998. Observe son ordre : jour, puis mois. Le code utilise quatre chiffres.", [
-    { label: "Réessayer", action: () => examineLockbox() },
-    { label: "Consulter le carnet", action: () => showJournal() }
-  ], "ÉNIGME");
-}
-function correctCode() {
-  state.boxCodeSolved = true;
-  save();
-  openModal("Le mécanisme se déverrouille",
-    "Un déclic retentit. Le code était bien 1408 : le jour et le mois de la photographie. Mais le coffret possède encore une serrure mécanique.",
-    [
-      { label: "Utiliser la petite clé en cuivre", action: () => {
-        if (!state.found.includes("key")) {
-          openModal("Il manque une clé", "Le code a libéré le mécanisme, mais il faut une petite clé pour ouvrir le coffret.");
-          return;
-        }
-        state.boxOpened = true;
-        state.selectedItem = null;
-        addItem("dossier");
-        openModal("Le dossier Kpassa",
-          "À l'intérieur se trouve un dossier jauni. Sur la première page, une annotation manuscrite : « Transfert effectué sur ordre du commissaire Kpassa. Témoin déplacé le 14 août 1998. » Une signature : A.K.",
-          [{ label: "Ajouter le dossier au carnet", action: () => toast("Nouvelle preuve enregistrée. L'affaire prend une autre dimension.") }],
-          "NOUVELLE PREUVE");
-      } }
-    ], "ÉNIGME RÉSOLUE");
+const api = {
+  has: (id) => state.found.includes(id),
+  flag: (name) => !!state.flags[name],
+  setFlag: (name, value = true) => { state.flags[name] = value; save(); },
+  addItem,
+  clearSelection: () => { state.selectedItem = null; },
+  openModal, toast, examine, showJournal
+};
+
+/* ---------- Navigation ---------- */
+function refreshHome() {
+  const saved = hasSave();
+  show($("start-button"), !saved);
+  show($("continue-button"), saved);
+  show($("new-game-button"), saved);
 }
 function startGame() {
   $("home-screen").hidden = true;
   $("game-screen").hidden = false;
+  renderScene();
 }
-function showJournal() {
-  const lines = [
-    "Enquête : La chambre aux symboles",
-    "Lieu : Centre médical Saint-Michel, Porto-Novo",
-    "Objectif : comprendre les signes laissés par le témoin."
-  ];
-  if (state.clueRead) lines.push("• Mur : « La date ouvre ce que la mémoire a fermé. »");
-  if (state.found.includes("note")) lines.push("• Fragment : initiales A.K.");
-  if (state.found.includes("photo")) lines.push("• Photographie : 14.08.1998.");
-  if (state.boxCodeSolved) lines.push("• Coffret : code 1408 validé.");
-  if (state.found.includes("dossier")) lines.push("• Dossier : transfert du témoin ordonné par le commissaire Kpassa, le 14 août 1998. Signature A.K.");
-  openModal("Carnet d'enquête", lines.join("\n"),
-    [{ label: "Fermer le carnet", action: () => {} }], "NOTES DE L'INSPECTEUR");
-}
-function interrogate() {
-  if (!state.witnessAsked) {
-    state.witnessAsked = true;
-    save();
-    openModal("Le témoin",
-      "L'homme garde les yeux fixés sur le mur. Il murmure : « Ils ont effacé le nom… mais pas la date. Demandez à Adélaïde. Elle était là cette nuit-là. »",
-      [
-        { label: "Qui est Adélaïde ?", action: () => openModal("Le témoin",
-          "« L'ancienne archiviste. Elle connaît l'histoire de cette chambre. Mais ne prononcez pas le nom Kpassa devant elle. »",
-          [{ label: "Noter ce nom", action: () => toast("Nom ajouté au carnet : Kpassa.") }], "DÉPOSITION") },
-        { label: "Le laisser se reposer", action: () => toast("Le témoin se replonge dans le silence.") }
-      ], "DÉPOSITION");
-  } else {
-    openModal("Le témoin", "« La date… retrouvez Adélaïde. Elle sait pourquoi ce dossier a disparu. »",
-      [{ label: "Terminer l'entretien", action: () => {} }], "DÉPOSITION");
-  }
-}
-$("start-button").addEventListener("click", startGame);
-$("continue-button").addEventListener("click", startGame);
-$("back-home").addEventListener("click", () => {
+function goHome() {
   $("game-screen").hidden = true;
   $("home-screen").hidden = false;
-});
+  refreshHome();
+}
+function newGame() {
+  try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(OLD_SAVE_KEY); } catch (_) {}
+  Object.keys(state).forEach((k) => delete state[k]);
+  Object.assign(state, freshState());
+  $("sound-toggle").textContent = "♪";
+  startGame();
+}
+function confirmNewGame() {
+  openModal("Nouvelle partie",
+    "Ta progression actuelle sera effacée. Tu veux vraiment recommencer l'enquête depuis le début ?",
+    [
+      { label: "Oui, recommencer", action: newGame },
+      { label: "Non, garder ma partie", action: () => {} }
+    ], "ATTENTION");
+}
+function goNext() {
+  const idx = scenes.findIndex((s) => s.id === state.sceneId);
+  const next = scenes[idx + 1];
+  if (next) {
+    state.sceneId = next.id;
+    state.selectedItem = null;
+    save();
+    renderScene();
+    return;
+  }
+  openModal("Dossier " + currentScene().caseNumber + " résolu",
+    "Tu as résolu l'affaire de " + currentScene().city + ". Les prochaines villes arrivent bientôt : l'enquête continue.",
+    [{ label: "Retour à l'accueil", action: goHome }], "À SUIVRE");
+}
+
+/* ---------- Événements ---------- */
+$("start-button").addEventListener("click", startGame);
+$("continue-button").addEventListener("click", startGame);
+$("new-game-button").addEventListener("click", confirmNewGame);
+$("next-scene-button").addEventListener("click", goNext);
+$("back-home").addEventListener("click", goHome);
 $("journal-button").addEventListener("click", showJournal);
-$("dialogue-button").addEventListener("click", interrogate);
+$("dialogue-button").addEventListener("click", () => currentScene().interrogate(api));
 $("sound-toggle").addEventListener("click", () => {
   state.sound = !state.sound;
   $("sound-toggle").textContent = state.sound ? "♫" : "♪";
   toast(state.sound ? "Le son sera disponible dans une prochaine version." : "Son désactivé.");
 });
-document.querySelectorAll(".hotspot").forEach((button) => {
-  button.addEventListener("click", () => examine(button.dataset.target));
-});
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", closeModal));
 $("dialogue-modal").addEventListener("click", (event) => {
   if (event.target.id === "dialogue-modal") closeModal();
 });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeModal(); });
+
+/* ---------- Démarrage ---------- */
 load();
-if (localStorage.getItem(SAVE_KEY)) $("continue-button").hidden = false;
+$("sound-toggle").textContent = state.sound ? "♫" : "♪";
+refreshHome();
