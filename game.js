@@ -85,6 +85,13 @@ function renderScene() {
   updateInventory();
   updateHint();
   updateNext();
+
+  // Texte d'arrivée optionnel (scene.intro), affiché une seule fois par scène.
+  if (s.intro && !state.flags["intro:" + s.id]) {
+    state.flags["intro:" + s.id] = true;
+    save();
+    openModal(s.intro.title, s.intro.text, [{ label: s.intro.button || "Commencer l'enquête", action: () => {} }], s.intro.eyebrow || "ARRIVÉE");
+  }
 }
 
 /* ---------- Interface ---------- */

@@ -1,0 +1,27 @@
+/* Décor de la scène 02 — Cotonou (archives). Utilise les styles de base de style.css. */
+.scene-archives{background:linear-gradient(180deg,#4b463e 0%,#6b5f50 56%,#2f2924 57%,#24201c 100%)}
+.scene-archives:before{background:linear-gradient(90deg,#403b36,#6d6154 50%,#443f39)}
+.scene-archives:after{background:repeating-linear-gradient(0deg,#2c2621 0 2px,#352e28 3px 4px)}
+
+.arc-sign{position:absolute;left:8%;top:4%;font:600 9px Cinzel,serif;letter-spacing:3px;color:#d7b779;opacity:.85}
+
+.arc-shelves{position:absolute;left:5%;top:14%;width:38%;height:48%;border:4px solid #241b17;box-shadow:inset 0 0 18px #000a;
+  background:
+    repeating-linear-gradient(0deg,#241b17 0 5px,transparent 5px 25%),
+    repeating-linear-gradient(90deg,#7a4f3a 0 6px,#a8854f 6px 10px,#4f5a49 10px 15px,#8e4148 15px 19px,#cdbf9d 19px 22px)}
+
+.arc-woman{position:absolute;left:44%;bottom:26%;width:56px;height:98px}
+.arc-head{position:absolute;left:15px;top:0;width:26px;height:30px;border-radius:50% 50% 45% 45%;background:#4a2d22;box-shadow:inset 0 8px 0 #1a1110}
+.arc-body{position:absolute;left:0;top:28px;width:56px;height:70px;background:linear-gradient(100deg,#6e3340,#8e4148 60%,#5c2a35);clip-path:polygon(22% 0,78% 0,100% 100%,0 100%)}
+
+.arc-desk{position:absolute;left:28%;bottom:13%;width:40%;height:16%;background:linear-gradient(180deg,#5a4130,#3f2c20);border-top:8px solid #8a6845;box-shadow:0 10px 0 #17110d}
+.arc-frame{position:absolute;left:12%;top:-34px;width:20px;height:26px;border:3px solid #d7b779;background:linear-gradient(135deg,#b9a98b,#7e705a)}
+.arc-papers{position:absolute;right:10%;top:-12px;width:34px;height:7px;background:#d8cdb8;box-shadow:2px -5px 0 #c4b89f}
+
+.arc-cabinet{position:absolute;right:6%;bottom:14%;width:24%;height:42%;border:3px solid #2a2e33;background:linear-gradient(180deg,#68707a,#4b525a)}
+.arc-cabinet:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 calc(33.33% - 3px),#2a2e33 calc(33.33% - 3px) 33.33%)}
+.arc-cabinet:after{content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(#b8a67e,#b8a67e) 50% 16%/30% 5px no-repeat,
+    linear-gradient(#b8a67e,#b8a67e) 50% 50%/30% 5px no-repeat,
+    linear-gradient(#b8a67e,#b8a67e) 50% 84%/30% 5px no-repeat}
