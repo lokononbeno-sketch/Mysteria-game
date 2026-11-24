@@ -1,31 +1,32 @@
 # MYSTERIA 🇧🇯
-### Une aventure policière interactive — Made in Benin
-
-MYSTERIA est un jeu d'enquête narratif mobile-first, conçu en format portrait. Son univers s'inspire des jeux d'aventure point-and-click à objets cachés, tout en proposant ses propres personnages, intrigues, dialogues, énigmes et solutions.
-
-## Direction du projet
-- Univers visuel et culturel béninois.
-- Personnages noirs, ancrés dans la société béninoise.
-- Cinq étapes : Porto-Novo, Cotonou, Parakou, Abomey-Calavi et Ouidah.
-- Exploration de scènes, objets cachés, inventaire, dialogues, interrogatoires et énigmes.
-- Histoires autonomes reliées par une intrigue centrale.
-
-## Technologies
-HTML, CSS et JavaScript natifs. La progression du prototype est sauvegardée localement dans le navigateur. Supabase sera envisagé plus tard pour les comptes, la synchronisation et les classements en ligne.
+Mysteria évolue vers un jeu d'action-aventure 3D en monde ouvert, avec Porto-Novo comme première ville jouable.
 
 ## Lancer le jeu
-Ouvrir `index.html` dans un navigateur. Pour publier avec GitHub Pages : Settings → Pages → Deploy from a branch → main → /(root).
+Publier avec GitHub Pages (Settings → Pages → Deploy from a branch → main → /(root)). Le moteur 3D charge Three.js depuis jsDelivr : connexion internet requise.
 
-## Structure du code
-- `game.js` : le moteur (sauvegarde, inventaire, carnet, fenêtres, navigation entre scènes, « Nouvelle partie »). Il ne contient aucun texte d'enquête.
-- `scenes/` : **un fichier par scène** (décor, zones cliquables, objets, dialogues, énigmes, carnet).
-- `index.html` et `style.css` : l'interface.
+## Commandes
+- PC : WASD ou flèches pour marcher, E pour prendre/quitter un véhicule, Espace pour sauter.
+- Mobile : joystick tactile, bouton Prendre/Sortir, bouton Saut.
+- Mini-carte : position du joueur, destination et itinéraire indicatif.
 
-### Ajouter une scène
-1. Copier `scenes/01-porto-novo.js` en `scenes/02-cotonou.js`.
-2. Changer `id`, `order`, `city`, `place`, `title`, les objets, les zones cliquables et la logique.
-3. Ajouter `<script src="scenes/02-cotonou.js"></script>` dans `index.html`, avant `game.js`.
-4. Quand le drapeau `completeFlag` de la scène est activé, le bouton « Enquête suivante » apparaît tout seul.
+## Prototype 3D
+- Quartier fictif inspiré de Porto-Novo : maisons à véranda, façades pastel, toits, marché et palmiers.
+- Personnage humain stylisé avec visage, vêtements et animation de marche.
+- Piétons animés, motos et voitures.
+- Prise en main d'une moto ou d'une voiture.
+- Missions avec récompenses en FCFA.
+- Caméra à la troisième personne et mini-carte.
 
-## Prototype actuel
-Une première scène d'enquête à Porto-Novo (« La chambre aux symboles »). Les illustrations de décor sont provisoires et dessinées en CSS ; elles seront remplacées progressivement par des illustrations originales et documentées de lieux béninois.
+## Mode enquête historique
+Le mode enquête narratif est conservé dans `enquete.html`. Les fichiers de scènes et son moteur d'origine restent présents.
+
+## Modules 3D
+- `monde-ouvert/game.js` : monde, caméra, contrôles et boucle de jeu.
+- `monde-ouvert/player.js` : personnage.
+- `monde-ouvert/vehicles.js` : véhicules.
+- `monde-ouvert/traffic.js` : circulation et piétons.
+- `monde-ouvert/missions.js` : objectifs et récompenses.
+- `monde-ouvert/minimap.js` : carte.
+
+## Limites du prototype
+Les modèles sont provisoires et procéduraux, pas photoréalistes. La carte est un premier quartier fictif inspiré de la ville, pas une reproduction géographique exacte. Les collisions, dialogues, sauvegardes et missions complexes seront ajoutés dans les prochaines versions.
